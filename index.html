@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Çeviri Uygulaması</title>
+    <title>Çeviri & TTS Uygulaması</title>
 </head>
 <body>
-    <h1>Çeviri Uygulaması</h1>
+    <h1>Çeviri & TTS Uygulaması</h1>
+    
     <textarea id="inputText" placeholder="Çevrilecek metni girin"></textarea>
     <select id="language">
         <option value="en">İngilizce</option>
@@ -15,26 +16,59 @@
         <option value="de">Almanca</option>
     </select>
     <button onclick="translateText()">Çevir</button>
+
     <h2>Çeviri Sonucu:</h2>
     <p id="outputText"></p>
+    
+    <button onclick="convertToSpeech()">🔊 Metni Seslendir</button>
+    <audio id="audioPlayer" controls></audio>
 
     <script>
-       async function translateText() {
-    const text = document.getElementById("inputText").value;
-    const targetLang = document.getElementById("language").value;
+        let translatedText = "";
 
-    const response = await fetch('https://translate-app-yjvw.onrender.com/translate', {  // ✅ Sonuna "/translate" ekledik!
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ text, targetLang })
-    });
+        async function translateText() {
+            const text = document.getElementById("inputText").value;
+            const targetLang = document.getElementById("language").value;
 
-    const data = await response.json();
-    document.getElementById("outputText").innerText = data.translatedText;
-}
+            const response = await fetch('https://translate-app-yjvw.onrender.com/translate', {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ text, targetLang })
+            });
 
+            const data = await response.json();
+            document.getElementById("outputText").innerText = data.translatedText;
+            translatedText = data.translatedText; // Çeviri sonucunu sakla
+        }
+
+        async function convertToSpeech() {
+            if (!translatedText) {
+                alert("Önce metni çevirin!");
+                return;
+            }
+
+            const targetLang = document.getElementById("language").value;
+            
+            const response = await fetch('https://translate-app-yjvw.onrender.com/tts', {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ text: translatedText, languageCode: targetLang })
+            });
+
+            const data = await response.json();
+
+            if (data.audioContent) {
+                const audioPlayer = document.getElementById("audioPlayer");
+                audioPlayer.src = `data:audio/mp3;base64,${data.audioContent}`;
+                audioPlayer.play();
+            } else {
+                alert("Ses oluşturulamadı.");
+            }
+        }
     </script>
 </body>
 </html>
