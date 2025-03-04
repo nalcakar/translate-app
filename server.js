@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Google API Anahtarı
 const GOOGLE_TRANSLATE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
 
 // Çeviri API'si
@@ -41,8 +42,7 @@ app.post('/translate', async (req, res) => {
     }
 });
 
+// Sunucuyu Başlat
 app.listen(PORT, () => {
     console.log(`Sunucu ${PORT} portunda çalışıyor...`);
 });
-const path = require('path');
-app.use(express.static(path.join(__dirname, 'public')));
