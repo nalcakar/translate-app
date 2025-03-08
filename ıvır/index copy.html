@@ -51,11 +51,23 @@
         <h3>Çevir ve Seslendir</h3>
         <p id="inputText">Merhaba, bugün hava çok güzel!</p>
         <select id="language">
-            <option value="en">İngilizce</option>
+            <option value="en-US">İngilizce (ABD)</option>
+            <option value="en-GB">İngilizce (İngiltere)</option>
+            <option value="en-AU">İngilizce (Avustralya)</option>
             <option value="es">İspanyolca</option>
             <option value="fr">Fransızca</option>
             <option value="de">Almanca</option>
         </select>
+        
+        <select id="voice">
+            <option value="Tom - US Male">Tom (ABD Erkek)</option>
+            <option value="Sally - US Female">Sally (ABD Kadın)</option>
+            <option value="Mike - UK Male">Mike (İngiltere Erkek)</option>
+            <option value="Judy - UK Female">Judy (İngiltere Kadın)</option>
+            <option value="Henry - Australian Male">Henry (Avustralya Erkek)</option>
+            <option value="Mary - Australian Female">Mary (Avustralya Kadın)</option>
+        </select>
+        
         <button onclick="translateText()">Çevir</button>
 
         <h2>Çeviri Sonucu:</h2>
@@ -68,6 +80,15 @@
     <script>
         let translatedText = "";
         const inputText = "Merhaba, bugün hava çok güzel!"; // Variable'dan alınıyor
+
+        const voices = {
+            "Tom - US Male": { languageCode: "en-US", name: "en-US-Wavenet-J", gender: "MALE" },
+            "Sally - US Female": { languageCode: "en-US", name: "en-US-Wavenet-C", gender: "FEMALE" },
+            "Mike - UK Male": { languageCode: "en-GB", name: "en-GB-Wavenet-B", gender: "MALE" },
+            "Judy - UK Female": { languageCode: "en-GB", name: "en-GB-Wavenet-F", gender: "FEMALE" },
+            "Henry - Australian Male": { languageCode: "en-AU", name: "en-AU-Wavenet-B", gender: "MALE" },
+            "Mary - Australian Female": { languageCode: "en-AU", name: "en-AU-Wavenet-C", gender: "FEMALE" },
+        };
 
         async function translateText() {
             const targetLang = document.getElementById("language").value;
@@ -91,24 +112,28 @@
                 return;
             }
 
-            const targetLang = document.getElementById("language").value;
-            
+            const selectedVoice = document.getElementById("voice").value;
+            const voiceData = voices[selectedVoice];
+
+            console.log("Seçilen Ses:", voiceData);
+
             const response = await fetch('https://translate-app-yjvw.onrender.com/tts', {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ text: translatedText, languageCode: targetLang })
+                body: JSON.stringify({ text: translatedText, languageCode: voiceData.languageCode, voice: voiceData.name })
             });
 
             const data = await response.json();
+            console.log("API Yanıtı:", data);
 
             if (data.audioContent) {
                 const audioPlayer = document.getElementById("audioPlayer");
                 audioPlayer.src = `data:audio/mp3;base64,${data.audioContent}`;
                 audioPlayer.play();
             } else {
-                alert("Ses oluşturulamadı.");
+                alert("Ses oluşturulamadı. Lütfen farklı bir ses seçin veya API'yi kontrol edin.");
             }
         }
     </script>

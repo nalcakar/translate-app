@@ -45,7 +45,7 @@ app.post('/translate', async (req, res) => {
 // 📌 TTS API (Metni Sese Dönüştürme)
 app.post('/tts', async (req, res) => {
     try {
-        const { text, languageCode } = req.body;
+        const { text, languageCode, ssmlGender } = req.body;
 
         if (!text || !languageCode) {
             return res.status(400).json({ error: 'Lütfen metin ve dil kodunu belirtin' });
@@ -55,7 +55,7 @@ app.post('/tts', async (req, res) => {
             `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
             {
                 input: { text },
-                voice: { languageCode, ssmlGender: "NEUTRAL" },
+                voice: { languageCode, ssmlGender: ssmlGender || "NEUTRAL" },
                 audioConfig: { audioEncoding: "MP3" }
             }
         );
@@ -73,6 +73,7 @@ app.post('/tts', async (req, res) => {
         res.status(500).json({ error: 'TTS işlemi başarısız oldu' });
     }
 });
+
 
 app.listen(PORT, () => {
     console.log(`Sunucu ${PORT} portunda çalışıyor...`);
