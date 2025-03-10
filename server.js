@@ -17,17 +17,40 @@ const { GOOGLE_TRANSLATE_API_KEY, GOOGLE_TTS_API_KEY, OPENAI_API_KEY } = process
 if (!OPENAI_API_KEY) {
   console.error('Error: OPENAI_API_KEY is not set in the environment variables.');
 }
+if (!GOOGLE_TTS_API_KEY) {
+  console.error('Error: GOOGLE_TTS_API_KEY is not set in the environment variables.');
+}
 
-// 📌 Existing /translate route (placeholder)
+// 📌 /translate route (placeholder)
 app.post('/translate', async (req, res) => {
   // TODO: Implement your translate functionality here
   res.json({ message: 'Translate route not implemented yet.' });
 });
 
-// 📌 Existing /tts route (placeholder)
+// 📌 /tts route - implemented using Google TTS API
 app.post('/tts', async (req, res) => {
-  // TODO: Implement your TTS functionality here
-  res.json({ message: 'TTS route not implemented yet.' });
+  const { text, languageCode, ssmlGender } = req.body;
+  if (!text || !languageCode || !ssmlGender) {
+    return res.status(400).json({ error: 'Missing required parameters: text, languageCode, and ssmlGender.' });
+  }
+  try {
+    const ttsResponse = await axios.post(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
+      {
+        input: { text },
+        voice: { languageCode, ssmlGender },
+        audioConfig: { audioEncoding: 'MP3' }
+      },
+      {
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+    const audioContent = ttsResponse.data.audioContent;
+    res.json({ audioContent });
+  } catch (error) {
+    console.error('Error calling Google TTS API:', error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'TTS request failed.' });
+  }
 });
 
 // Helper function for OpenAI request
@@ -51,7 +74,7 @@ const fetchOpenAIResponse = async (prompt) => {
   return response.data.choices[0].message.content;
 };
 
-// 📌 OpenAI endpoint
+// 📌 /openai endpoint
 app.post('/openai', async (req, res) => {
   const { prompt } = req.body;
 
