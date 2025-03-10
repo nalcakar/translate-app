@@ -6,60 +6,57 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS and JSON Middleware
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Existing environment variables for Google APIs
-const GOOGLE_TRANSLATE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
-const GOOGLE_TTS_API_KEY = process.env.GOOGLE_TTS_API_KEY;
+// API Keys from environment
+const { GOOGLE_TRANSLATE_API_KEY, GOOGLE_TTS_API_KEY, OPENAI_API_KEY } = process.env;
 
 // 📌 Existing /translate route
 app.post('/translate', async (req, res) => {
-  // ... your existing code
+  // ... your existing translate code here
 });
 
 // 📌 Existing /tts route
 app.post('/tts', async (req, res) => {
-  // ... your existing code
+  // ... your existing tts code here
 });
 
-// 📌 NEW: OpenAI endpoint
+// Helper function for OpenAI request
+const fetchOpenAIResponse = async (prompt) => {
+  const payload = {
+    model: 'gpt-3.5-turbo',
+    messages: [
+      { role: 'system', content: 'You are an expert language tutor.' },
+      { role: 'user', content: prompt }
+    ],
+    max_tokens: 150,
+    temperature: 0.7
+  };
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${OPENAI_API_KEY}`
+  };
+
+  const response = await axios.post('https://api.openai.com/v1/chat/completions', payload, { headers });
+  return response.data.choices[0].message.content;
+};
+
+// 📌 OpenAI endpoint
 app.post('/openai', async (req, res) => {
+  const { prompt } = req.body;
+
+  if (!prompt) {
+    return res.status(400).json({ error: 'No prompt provided' });
+  }
+
   try {
-    // For example, we expect the client to send a "prompt" or "messages"
-    const { prompt } = req.body;
-
-    if (!prompt) {
-      return res.status(400).json({ error: 'No prompt provided' });
-    }
-
-    // Call the OpenAI Chat Completions endpoint
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: 'You are an expert language tutor.' },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 150,
-        temperature: 0.7
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-        }
-      }
-    );
-
-    // Extract the text from the response
-    const openaiReply = response.data.choices[0].message.content;
-
-    res.json({ reply: openaiReply });
+    const reply = await fetchOpenAIResponse(prompt);
+    res.json({ reply });
   } catch (error) {
-    console.error(error);
+    console.error('Error calling OpenAI API:', error.response ? error.response.data : error.message);
     res.status(500).json({ error: 'OpenAI request failed' });
   }
 });
