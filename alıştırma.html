@@ -3,108 +3,321 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Video & Fill-in-the-Blanks with Gamification</title>
+  <title>Stylish Video & Fill-in-the-Blanks with Gamification</title>
+  <!-- Import Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #e0eafc, #cfdef3);
       margin: 0;
-      padding: 20px;
+      padding: 40px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
+      color: #333;
+      box-sizing: border-box;
     }
     .container {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      background: #ffffff;
+      padding: 50px;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
       width: 90%;
       max-width: 900px;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .container::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+      transform: rotate(45deg);
+      pointer-events: none;
+    }
+    .video-container {
+      position: relative;
     }
     video {
       width: 100%;
       border-radius: 10px;
       max-height: 80vh;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
     }
-    .text-container, .translation-container {
+    /* Overlay for scoreboard and counter */
+    .video-overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 8px 12px;
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    .video-overlay .counter,
+    .video-overlay .scoreboard {
+      font-size: 16px;
+      margin: 2px 0;
+      font-weight: bold;
+      color: #333;
+    }
+    .text-container, .translation-container, .tts-container {
       margin-top: 20px;
       font-size: 18px;
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
     .hidden-words {
       display: none;
       font-size: 16px;
-      color: red;
-      background: white;
-      padding: 5px;
+      color: #d32f2f;
+      background: #fff;
+      padding: 5px 10px;
       border-radius: 5px;
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
       text-align: center;
+      margin-bottom: 10px;
     }
     input.fill-blank {
-      width: 50px;
+      width: 60px;
       text-align: center;
       font-size: 16px;
-      border: 1px solid #ccc;
+      border: 2px solid #ccc;
       border-radius: 5px;
       padding: 5px;
+      transition: all 0.3s ease;
+      margin: 0 3px;
+    }
+    input.fill-blank:focus {
+      border-color: #64b5f6;
+      outline: none;
     }
     .correct {
       background-color: #c8e6c9;
-      border: 2px solid green;
+      border-color: #388e3c;
     }
     .incorrect {
       background-color: #ffcdd2;
-      border: 2px solid red;
+      border-color: #d32f2f;
     }
     .button-container {
       display: flex;
       justify-content: space-between;
-      margin-top: 10px;
+      margin-top: 20px;
+      gap: 10px;
     }
-    .button-container button {
-      padding: 10px;
-      border-radius: 5px;
+    .button-container button,
+    button#checkAnswersBtn,
+    button#showAnswersBtn,
+    button[onclick="restartExercise()"] {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      background-color: #64b5f6;
+      color: white;
+    }
+    .button-container button:hover,
+    button#checkAnswersBtn:hover,
+    button#showAnswersBtn:hover,
+    button[onclick="restartExercise()"]:hover {
+      background-color: #42a5f5;
+      transform: translateY(-2px);
+    }
+    /* Align checkboxes to the left */
+    .menu, .translation-container {
+      text-align: left;
+    }
+    .menu label, .translation-container label {
+      font-size: 16px;
+      margin-right: 10px;
       cursor: pointer;
     }
     .language-selector {
       margin-top: 10px;
-    }
-    .exercise-counter {
-      margin-top: 10px;
-      font-size: 18px;
-      font-weight: bold;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 16px;
     }
     /* Style for gamification messages */
     #points-message {
       font-size: 16px;
-      color: green;
+      color: #2e7d32;
       opacity: 0;
-      transition: opacity 1s;
+      transition: opacity 1s ease;
+      margin-top: 10px;
     }
     #achievement-message {
       font-size: 16px;
-      color: blue;
+      color: #1976d2;
+      margin-top: 10px;
     }
+    .tts-container {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f1f1f1;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    .tts-container select, .tts-container button {
+      margin-top: 5px;
+      padding: 8px 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+      transition: background-color 0.3s ease;
+    }
+    .tts-container button:hover {
+      background-color: #e0e0e0;
+    }
+    /* Mobile responsiveness */
+    @media (max-width: 600px) {
+      body {
+        padding: 20px 10px;
+      }
+      .container {
+        padding: 20px;
+        width: 95%;
+      }
+      video {
+        max-height: 60vh;
+      }
+      .text-container, .translation-container, .tts-container {
+        padding: 10px;
+        font-size: 16px;
+      }
+      .menu label, .translation-container label {
+        font-size: 14px;
+      }
+      .language-selector {
+        width: 100%;
+        font-size: 14px;
+      }
+      .button-container {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .button-container button,
+      button#checkAnswersBtn,
+      button#showAnswersBtn,
+      button[onclick="restartExercise()"] {
+        width: 100%;
+        font-size: 14px;
+      }
+      .button-container button:not(:last-child),
+      button#checkAnswersBtn,
+      button#showAnswersBtn,
+      button[onclick="restartExercise()"] {
+        margin-bottom: 10px;
+      }
+      .video-overlay .counter,
+      .video-overlay .scoreboard {
+        font-size: 14px;
+      }
+    }
+    /* Custom checkbox styling */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #64b5f6;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  vertical-align: middle;
+}
+
+/* Checked state styling */
+input[type="checkbox"]:checked {
+  background-color: #64b5f6;
+  border-color: #64b5f6;
+}
+
+/* Create a custom checkmark */
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Align checkboxes with their label text */
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px; /* Adjust the gap as needed */
+}
+#translated-text{
+  text-align: left;
+
+
+}
+#exercise-text {
+  font-size: 18px;
+    color: #424242;
+    text-align: left;
+  padding: 3px;
+  
+  background-color: #b3eff7;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
   </style>
 </head>
 <body>
   <div class="container">
     <div class="video-container">
       <video id="videoPlayer" controls autoplay muted playsinline controlsList="nofullscreen"></video>
-
+      <!-- Scoreboard and counter overlay -->
+      <div class="video-overlay">
+        <span id="exerciseCounter" class="counter"></span>
+        <span id="score-counter" class="scoreboard">Skor: 0</span>
+      </div>
     </div>
-    <p class="exercise-counter" id="exerciseCounter"></p>
-    <!-- Gamification elements -->
-    <p id="score-counter" class="exercise-counter">Skor: 0</p>
-    <p id="achievement-message"></p>
-    <p id="points-message"></p>
+    
+    
     
     <div class="text-container">
-      <h3>Boşlukları Doldurun</h3>
-      <p id="hidden-words" class="hidden-words"></p>
+     
+     
       <p id="exercise-text"></p>
+      <p id="hidden-words" class="hidden-words"></p>
       <p id="translated-text"></p>
       <!-- Hidden element to store the original English text for TTS -->
       <div id="english-text" style="display: none;"></div>
@@ -112,12 +325,12 @@
     <button id="checkAnswersBtn" onclick="checkAnswers()">Kontrol Et</button>
     <button id="showAnswersBtn" onclick="showAnswers()">Cevabı Göster</button>
     <button onclick="restartExercise()">Tekrar Başla</button><br><br>
-    <div class="menu">
+    <p id="achievement-message"></p>
+    <p id="points-message"></p>
+    <div class="translation-container">
       <label>
         <input type="checkbox" id="show-words" onchange="toggleWords()"> Çıkarılan Kelimeleri Göster
       </label>
-    </div>
-    <div class="translation-container">
       <label>
         <input type="checkbox" id="show-translation" onchange="toggleTranslation()"> Cümle Çevirisini Göster
       </label>
@@ -130,11 +343,7 @@
     </div>
     
     <!-- TTS Container -->
-    <div class="tts-container" style="margin-top: 10px;">
-      <!-- Custom TTS using our endpoint for translated text -->
-    
-      <br><br>
-      <!-- Google TTS Controls -->
+    <div class="tts-container">
       <div>
         <label for="voice-select">Google TTS Voice:</label>
         <select id="voice-select"></select>
@@ -157,7 +366,6 @@
     // Use this endpoint for all TTS calls.
     const TTS_ENDPOINT = "https://translate-app-yjvw.onrender.com/tts";
    
-
     const videos = [
       { src: "video/You-ought-to-be-ashamed-of-yourself.mp4", text: "You ought to be ashamed of yourself!" },
       { src: "video/Now-I-think-you-ought-to-go-to-sleep.mp4", text: "Now I think you ought to go to sleep." },
@@ -197,34 +405,34 @@
 
     // Google TTS function using a simplified payload structure.
     async function playTextGoogle() {
-  let text = document.getElementById("english-text").textContent;
-  let selectedVoiceId = document.getElementById("voice-select").value;
-  let selectedVoice = voices.find(voice => voice.id === selectedVoiceId);
+      let text = document.getElementById("english-text").textContent;
+      let selectedVoiceId = document.getElementById("voice-select").value;
+      let selectedVoice = voices.find(voice => voice.id === selectedVoiceId);
 
-  const requestData = {
-    text: text,
-    languageCode: selectedVoice.languageCode,
-    ssmlGender: selectedVoice.gender === "MALE" ? "MALE" : "FEMALE"
-  };
+      const requestData = {
+        text: text,
+        languageCode: selectedVoice.languageCode,
+        ssmlGender: selectedVoice.gender === "MALE" ? "MALE" : "FEMALE"
+      };
 
-  try {
-    const response = await fetch(TTS_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestData)
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("TTS API Error:", errorText);
-      return;
+      try {
+        const response = await fetch(TTS_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestData)
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("TTS API Error:", errorText);
+          return;
+        }
+        const data = await response.json();
+        audio.src = `data:audio/mp3;base64,${data.audioContent}`;
+        audio.play();
+      } catch (error) {
+        console.error("Error in playTextGoogle:", error);
+      }
     }
-    const data = await response.json();
-    audio.src = `data:audio/mp3;base64,${data.audioContent}`;
-    audio.play();
-  } catch (error) {
-    console.error("Error in playTextGoogle:", error);
-  }
-}
 
     function stopSpeech() { 
       audio.pause(); 
@@ -232,19 +440,18 @@
     }
 
     function loadVideo(index) {
-  const videoPlayer = document.getElementById("videoPlayer");
-  videoPlayer.src = videos[index].src;
-  videoPlayer.load();
-  videoPlayer.play(); // Automatically play the video
-  updateText(videos[index].text);
-  updateButtons();
-  setInitialLanguageSelection();
-  updateCounter();
-  if (document.getElementById("show-translation").checked) {
-    translateSentence();
-  }
-}
-
+      const videoPlayer = document.getElementById("videoPlayer");
+      videoPlayer.src = videos[index].src;
+      videoPlayer.load();
+      videoPlayer.play(); // Automatically play the video
+      updateText(videos[index].text);
+      updateButtons();
+      setInitialLanguageSelection();
+      updateCounter();
+      if (document.getElementById("show-translation").checked) {
+        translateSentence();
+      }
+    }
 
     function updateButtons() {
       document.getElementById("prevBtn").style.display = currentVideoIndex > 0 ? "inline-block" : "none";
@@ -269,6 +476,7 @@
       document.getElementById("showAnswersBtn").style.display = "inline-block";
     }
 
+    // Update the overlay counter and scoreboard
     function updateCounter() {
       document.getElementById("exerciseCounter").innerText = `Alıştırma: ${currentVideoIndex + 1} / ${videos.length}`;
     }
@@ -308,7 +516,7 @@
       span.style.fontSize = window.getComputedStyle(input).fontSize;
       span.textContent = input.value || input.placeholder || "a";
       document.body.appendChild(span);
-      input.style.width = Math.max(50, span.offsetWidth + 10) + "px";
+      input.style.width = Math.max(60, span.offsetWidth + 10) + "px";
       document.body.removeChild(span);
     }
 
@@ -320,55 +528,48 @@
 
     // Gamified checkAnswers: awards 10 points per blank filled correctly (only once per blank)
     function checkAnswers() {
-  // Declare inputs at the beginning so they are available in all code blocks
-  let inputs = document.querySelectorAll(".fill-blank");
-  
-  // Check if this exercise has already been scored
-  if (exercisesScored[currentVideoIndex]) {
-    inputs.forEach(input => {
-      if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
-        // Even if already scored, ensure the correct styling is applied
-        input.classList.add("correct");
-        input.classList.remove("incorrect");
-        input.disabled = true;
-      } else {
-        input.classList.add("incorrect");
-        input.classList.remove("correct");
+      let inputs = document.querySelectorAll(".fill-blank");
+      
+      if (exercisesScored[currentVideoIndex]) {
+        inputs.forEach(input => {
+          if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
+            input.classList.add("correct");
+            input.classList.remove("incorrect");
+            input.disabled = true;
+          } else {
+            input.classList.add("incorrect");
+            input.classList.remove("correct");
+          }
+        });
+        return;
       }
-    });
-    
-    return;
-  }
-  
-  let pointsEarned = 0;
-  
-  inputs.forEach(input => {
-    if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
-      if (input.dataset.scored === "false") {
-        pointsEarned += 10;
-        input.dataset.scored = "true";
+      
+      let pointsEarned = 0;
+      
+      inputs.forEach(input => {
+        if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
+          if (input.dataset.scored === "false") {
+            pointsEarned += 10;
+            input.dataset.scored = "true";
+          }
+          input.classList.add("correct");
+          input.classList.remove("incorrect");
+          input.disabled = true;
+        } else {
+          input.classList.add("incorrect");
+          input.classList.remove("correct");
+        }
+      });
+      
+      totalScore += pointsEarned;
+      if (pointsEarned > 0) {
+        showPointsMessage(pointsEarned);
       }
-      input.classList.add("correct");
-      input.classList.remove("incorrect");
-      input.disabled = true;
-    } else {
-      input.classList.add("incorrect");
-      input.classList.remove("correct");
+      updateScoreCounter();
+      
+      exercisesScored[currentVideoIndex] = true;
     }
-  });
-  
-  totalScore += pointsEarned;
-  if (pointsEarned > 0) {
-    showPointsMessage(pointsEarned);
-  }
-  updateScoreCounter();
-  
-  // Mark this exercise as scored so that points won't be added again
-  exercisesScored[currentVideoIndex] = true;
-}
 
-
-    // Display a temporary message for points earned.
     function showPointsMessage(points) {
       let messageElement = document.getElementById("points-message");
       messageElement.innerText = "You earned " + points + " points!";
@@ -376,7 +577,6 @@
       setTimeout(() => { messageElement.style.opacity = 0; }, 2000);
     }
 
-    // Update the score counter and achievement message.
     function updateScoreCounter() {
       document.getElementById("score-counter").innerText = "Skor: " + totalScore;
       let achievementMessage = "";
@@ -394,6 +594,7 @@
         input.value = input.dataset.answer;
         input.classList.add("correct");
         input.disabled = true;
+        adjustInputWidth(input); // Adjust input width based on the answer text
       });
       document.getElementById("checkAnswersBtn").style.display = "none";
       document.getElementById("showAnswersBtn").style.display = "none";
@@ -429,7 +630,6 @@
       }
     }
 
-    // Translate the current video's text.
     function translateSentence() {
       const text = videos[currentVideoIndex].text;
       const languageSelect = document.getElementById("language-select");
@@ -454,9 +654,6 @@
         document.getElementById("translated-text").innerText = 'Translation error: ' + error.message;
       });
     }
-
-    // Custom TTS function for translated text.
-   
 
     loadVideo(currentVideoIndex);
   </script>

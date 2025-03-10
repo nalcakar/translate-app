@@ -43,7 +43,7 @@
             text-align: center;
         }
         input.fill-blank {
-            width: 100px;
+            width: 50px;
             text-align: center;
             font-size: 16px;
             border: 1px solid #ccc;
@@ -81,7 +81,9 @@
 <body>
     <div class="container">
         <div class="video-container">
-            <video id="videoPlayer" controls></video>
+            <video id="videoPlayer" controls disablePictureInPicture controlsList="nodownload nofullscreen" autoplay muted></video>
+
+
         </div>
         <p class="exercise-counter" id="exerciseCounter">aaa</p>
         
@@ -127,17 +129,25 @@
 
     <script>
         const videos = [
-            { src: "https://www.w3schools.com/html/mov_bbb.mp4", text: "Learning a new language opens many doors." },
-            { src: "https://www.w3schools.com/html/movie.mp4", text: "Practice makes perfect when learning a language." },
-            { src: "https://www.w3schools.com/html/mov_bbb.mp4", text: "They can help you do homework." },
-            { src: "https://www.w3schools.com/html/movie.mp4", text: "If you need help, I am always here." }
-        ];
+    { src: "video/You-ought-to-be-ashamed-of-yourself.mp4", text: "You ought to be ashamed of yourself!" },
+    { src: "video/Now-I-think-you-ought-to-go-to-sleep.mp4", text: "Now I think you ought to go to sleep." },
+    { src: "video/I-honestly-think-you-ought-to-sit-down-calmly-take-a-stress-pill-and-think-things-over.mp4", text: "I honestly think you ought to sit down calmly, take a stress pill and think things over." },
+    { src: "video/Maybe-you-ought-to-call-your-father-and-tell-him-about-it.mp4", text: "Maybe you ought to call your father and tell him about it." },
+    { src: "video/Hey-you-know-you-ought-to-invite-Maya-to-the-wedding.mp4", text: "Hey, you know, you ought to invite Maya to the wedding." },
+    { src: "video/So-tomorrow-I-think-we-ought-to-get-on-a-plane-and-go-straight-back-to-England.mp4", text: "So tomorrow I think we ought to get on a plane and go straight back to England." },
+    { src: "video/You-ought-to-be-ashamed-of-yourselves.mp4", text: "You ought to be ashamed of yourselves." },
+    { src: "video/Mark-before-Tony-comes-I-ought-to-explain-something.mp4", text: "Mark, before Tony comes, I ought to explain something." },
+    { src: "video/At-least-some-of-these-animals-ought-to-be-tested-for-disease.mp4", text: "At least some of these animals ought to be tested for disease." },
+    { src: "video/But-you-know-I-think-you-ought-to-get-him-some-help.mp4", text: "But, you know, I think you ought to get him some help." }
+];
+
         let currentVideoIndex = 0;
 
         function loadVideo(index) {
     const videoPlayer = document.getElementById("videoPlayer");
     videoPlayer.src = videos[index].src;
-    videoPlayer.load(); // Force reload of the new video
+    videoPlayer.load(); // Reload the new video
+    videoPlayer.play(); // Start playback automatically
     updateText(videos[index].text);
     updateButtons();
     setInitialLanguageSelection();
@@ -147,6 +157,7 @@
         translateSentence();
     }
 }
+
 
         function updateButtons() {
             document.getElementById("prevBtn").style.display = currentVideoIndex > 0 ? "inline-block" : "none";
@@ -177,7 +188,7 @@
             let words = text.split(/([.,;!?\"\s]+)/).filter(Boolean);
             let blanks = [];
             let wordIndexes = words.map((word, index) => /[a-zA-Z]/.test(word) ? index : null).filter(i => i !== null);
-            for (let i = 0; i < Math.floor(wordIndexes.length * 2 / 3); i++) {
+            for (let i = 0; i < Math.floor(wordIndexes.length * 2 / 5); i++) {
                 let randomIndex;
                 do {
                     randomIndex = wordIndexes[Math.floor(Math.random() * wordIndexes.length)];
@@ -195,20 +206,47 @@
             let hiddenWords = document.getElementById("hidden-words");
             hiddenWords.style.display = document.getElementById("show-words").checked ? "block" : "none";
         }
+        function adjustInputWidth(input) {
+    const span = document.createElement("span");
+    span.style.visibility = "hidden";
+    span.style.position = "absolute";
+    span.style.whiteSpace = "nowrap";
+    span.style.fontSize = window.getComputedStyle(input).fontSize;
+    span.textContent = input.value || input.placeholder || "a"; // Use placeholder or 'a' to avoid empty input issues
+    document.body.appendChild(span);
+    input.style.width = Math.max(50, span.offsetWidth + 10) + "px"; // Ensure minimum width
+    document.body.removeChild(span);
+}
 
-        function checkAnswers() {
-            let inputs = document.querySelectorAll(".fill-blank");
-            inputs.forEach(input => {
-                if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
-                    input.classList.add("correct");
-                    input.classList.remove("incorrect");
-                    input.disabled = true;
-                } else {
-                    input.classList.add("incorrect");
-                    input.classList.remove("correct");
-                }
-            });
+document.addEventListener("input", function(event) {
+    if (event.target.classList.contains("fill-blank")) {
+        adjustInputWidth(event.target);
+    }
+});
+
+function checkAnswers() {
+    let inputs = document.querySelectorAll(".fill-blank");
+    let allCorrect = true; // Track if all inputs are correct
+
+    inputs.forEach(input => {
+        if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
+            input.classList.add("correct");
+            input.classList.remove("incorrect");
+            input.disabled = true;
+        } else {
+            input.classList.add("incorrect");
+            input.classList.remove("correct");
+            allCorrect = false; // If any answer is wrong, set allCorrect to false
         }
+    });
+
+    // If all answers are correct, hide the buttons
+    if (allCorrect) {
+        document.getElementById("checkAnswersBtn").style.display = "none";
+        document.getElementById("showAnswersBtn").style.display = "none";
+    }
+}
+
 
         function showAnswers() {
     let inputs = document.querySelectorAll(".fill-blank");
@@ -277,7 +315,7 @@ function translateSentence() {
         return response.json();
     })
     .then(data => {
-        document.getElementById("translated-text").innerText = data.translatedText;
+        document.getElementById("translated-text").innerHTML = data.translatedText;
     })
     .catch(error => {
         console.error('Error translating text:', error);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Video & Fill-in-the-Blanks</title>
+  <title>Video & Fill-in-the-Blanks with Gamification</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -76,6 +76,17 @@
       font-size: 18px;
       font-weight: bold;
     }
+    /* Style for gamification messages */
+    #points-message {
+      font-size: 16px;
+      color: green;
+      opacity: 0;
+      transition: opacity 1s;
+    }
+    #achievement-message {
+      font-size: 16px;
+      color: blue;
+    }
   </style>
 </head>
 <body>
@@ -84,6 +95,10 @@
       <video id="videoPlayer" controls></video>
     </div>
     <p class="exercise-counter" id="exerciseCounter"></p>
+    <!-- Gamification elements -->
+    <p id="score-counter" class="exercise-counter">Skor: 0</p>
+    <p id="achievement-message"></p>
+    <p id="points-message"></p>
     
     <div class="text-container">
       <h3>Boşlukları Doldurun</h3>
@@ -136,6 +151,11 @@
   </div>
 
   <script>
+    // Global variables for gamification and scoring control
+    let totalScore = 0;
+    // scoringEnabled is true by default but will be set to false if "Tekrar Başla" is pressed
+    let scoringEnabled = true;
+
     // Use this endpoint for all TTS calls.
     const TTS_ENDPOINT = "https://translate-app-yjvw.onrender.com/tts";
 
@@ -178,12 +198,9 @@
 
     // Google TTS function using a simplified payload structure.
     async function playTextGoogle() {
-      // Retrieve the original English text from the hidden element.
       let text = document.getElementById("english-text").textContent;
       let selectedVoiceId = document.getElementById("voice-select").value;
       let selectedVoice = voices.find(voice => voice.id === selectedVoiceId);
-      
-      // Use a simpler payload: only text and languageCode.
       const requestData = {
         text: text,
         languageCode: selectedVoice.languageCode
@@ -217,6 +234,8 @@
       const videoPlayer = document.getElementById("videoPlayer");
       videoPlayer.src = videos[index].src;
       videoPlayer.load();
+      // When moving to a new video, scoring is enabled.
+      scoringEnabled = true;
       updateText(videos[index].text);
       updateButtons();
       setInitialLanguageSelection();
@@ -253,6 +272,8 @@
       document.getElementById("exerciseCounter").innerText = `Alıştırma: ${currentVideoIndex + 1} / ${videos.length}`;
     }
 
+    // updateText creates fill-in-the-blank inputs.
+    // Each input now also has a data-attempts attribute (starting at 0) and data-scored attribute.
     function updateText(text) {
       let words = text.split(/([.,;!?\"\s]+)/).filter(Boolean);
       let blanks = [];
@@ -265,11 +286,12 @@
         blanks.push(randomIndex);
       }
       let exerciseText = words.map((word, index) => {
-        return blanks.includes(index) ? `<input type='text' class='fill-blank' data-answer='${word}'>` : word;
+        return blanks.includes(index)
+          ? `<input type='text' class='fill-blank' data-answer='${word}' data-scored='false' data-attempts='0'>`
+          : word;
       }).join("");
       document.getElementById("exercise-text").innerHTML = exerciseText;
       document.getElementById("hidden-words").innerText = "Çıkarılan Kelimeler: " + blanks.map(i => words[i]).join(", ");
-      // Update hidden English text for TTS.
       document.getElementById("english-text").innerText = text;
     }
 
@@ -296,20 +318,67 @@
       }
     });
 
+    // checkAnswers awards points only if scoring is enabled.
+    // Also, each blank’s awarded points are reduced based on how many mistakes (attempts) were made.
     function checkAnswers() {
       let inputs = document.querySelectorAll(".fill-blank");
+      let pointsEarned = 0;
       inputs.forEach(input => {
-        if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
+        let answer = input.dataset.answer;
+        let userAnswer = input.value.trim().toLowerCase();
+        let correctAnswer = answer.toLowerCase();
+        // If correct answer:
+        if (userAnswer === correctAnswer) {
+          if (input.dataset.scored === "false") {
+            // Only award points if scoring is enabled.
+            if (scoringEnabled) {
+              let attempts = parseInt(input.dataset.attempts);
+              // Deduct 2 points per incorrect attempt, minimum of 2 points.
+              let pointsForBlank = Math.max(10 - 2 * attempts, 2);
+              pointsEarned += pointsForBlank;
+            }
+            input.dataset.scored = "true";
+          }
           input.classList.add("correct");
           input.classList.remove("incorrect");
           input.disabled = true;
         } else {
+          // Increment attempt count for each wrong check
+          let currentAttempts = parseInt(input.dataset.attempts);
+          input.dataset.attempts = currentAttempts + 1;
           input.classList.add("incorrect");
           input.classList.remove("correct");
         }
       });
+      // If scoring is enabled, add earned points and show message.
+      if (scoringEnabled && pointsEarned > 0) {
+        totalScore += pointsEarned;
+        showPointsMessage(pointsEarned);
+      }
+      updateScoreCounter();
     }
 
+    // Display a temporary message for points earned.
+    function showPointsMessage(points) {
+      let messageElement = document.getElementById("points-message");
+      messageElement.innerText = "You earned " + points + " points!";
+      messageElement.style.opacity = 1;
+      setTimeout(() => { messageElement.style.opacity = 0; }, 2000);
+    }
+
+    // Update the score counter and achievement message.
+    function updateScoreCounter() {
+      document.getElementById("score-counter").innerText = "Skor: " + totalScore;
+      let achievementMessage = "";
+      if (totalScore >= 200) {
+        achievementMessage = "Master Achiever!";
+      } else if (totalScore >= 100) {
+        achievementMessage = "Great job!";
+      }
+      document.getElementById("achievement-message").innerText = achievementMessage;
+    }
+
+    // showAnswers fills in the correct answers without awarding points.
     function showAnswers() {
       let inputs = document.querySelectorAll(".fill-blank");
       inputs.forEach(input => {
@@ -321,8 +390,11 @@
       document.getElementById("showAnswersBtn").style.display = "none";
     }
 
+    // restartExercise reloads the exercise for the current video without awarding any points.
+    // It sets scoringEnabled to false so that no new points are given for the restarted exercise.
     function restartExercise() {
-      loadVideo(currentVideoIndex);
+      scoringEnabled = false;
+      updateText(videos[currentVideoIndex].text);
       document.getElementById("checkAnswersBtn").style.display = "inline-block";
       document.getElementById("showAnswersBtn").style.display = "inline-block";
     }

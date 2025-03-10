@@ -92,7 +92,8 @@
 <body>
   <div class="container">
     <div class="video-container">
-      <video id="videoPlayer" controls></video>
+      <video id="videoPlayer" controls autoplay muted playsinline controlsList="nofullscreen"></video>
+
     </div>
     <p class="exercise-counter" id="exerciseCounter"></p>
     <!-- Gamification elements -->
@@ -131,8 +132,7 @@
     <!-- TTS Container -->
     <div class="tts-container" style="margin-top: 10px;">
       <!-- Custom TTS using our endpoint for translated text -->
-      <button id="ttsButton" onclick="convertToSpeech()">Dinle</button>
-      <audio id="audioPlayer" controls style="display: none;"></audio>
+    
       <br><br>
       <!-- Google TTS Controls -->
       <div>
@@ -151,13 +151,12 @@
   </div>
 
   <script>
-    // Global variables for gamification and scoring control
+    // Global variables for gamification
     let totalScore = 0;
-    // scoringEnabled is true by default but will be set to false if "Tekrar Başla" is pressed
-    let scoringEnabled = true;
 
     // Use this endpoint for all TTS calls.
     const TTS_ENDPOINT = "https://translate-app-yjvw.onrender.com/tts";
+   
 
     const videos = [
       { src: "video/You-ought-to-be-ashamed-of-yourself.mp4", text: "You ought to be ashamed of yourself!" },
@@ -174,7 +173,7 @@
 
     let currentVideoIndex = 0;
     let audio = new Audio();
-
+    let exercisesScored = new Array(videos.length).fill(false);
     // Google TTS voice options
     const voices = [
       { name: "Tom - US Male", languageCode: "en-US", id: "en-US-Wavenet-J", gender: "MALE" },
@@ -198,32 +197,34 @@
 
     // Google TTS function using a simplified payload structure.
     async function playTextGoogle() {
-      let text = document.getElementById("english-text").textContent;
-      let selectedVoiceId = document.getElementById("voice-select").value;
-      let selectedVoice = voices.find(voice => voice.id === selectedVoiceId);
-      const requestData = {
-        text: text,
-        languageCode: selectedVoice.languageCode
-      };
+  let text = document.getElementById("english-text").textContent;
+  let selectedVoiceId = document.getElementById("voice-select").value;
+  let selectedVoice = voices.find(voice => voice.id === selectedVoiceId);
 
-      try {
-        const response = await fetch(TTS_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestData)
-        });
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("TTS API Error:", errorText);
-          return;
-        }
-        const data = await response.json();
-        audio.src = `data:audio/mp3;base64,${data.audioContent}`;
-        audio.play();
-      } catch (error) {
-        console.error("Error in playTextGoogle:", error);
-      }
+  const requestData = {
+    text: text,
+    languageCode: selectedVoice.languageCode,
+    ssmlGender: selectedVoice.gender === "MALE" ? "MALE" : "FEMALE"
+  };
+
+  try {
+    const response = await fetch(TTS_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestData)
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("TTS API Error:", errorText);
+      return;
     }
+    const data = await response.json();
+    audio.src = `data:audio/mp3;base64,${data.audioContent}`;
+    audio.play();
+  } catch (error) {
+    console.error("Error in playTextGoogle:", error);
+  }
+}
 
     function stopSpeech() { 
       audio.pause(); 
@@ -231,19 +232,19 @@
     }
 
     function loadVideo(index) {
-      const videoPlayer = document.getElementById("videoPlayer");
-      videoPlayer.src = videos[index].src;
-      videoPlayer.load();
-      // When moving to a new video, scoring is enabled.
-      scoringEnabled = true;
-      updateText(videos[index].text);
-      updateButtons();
-      setInitialLanguageSelection();
-      updateCounter();
-      if (document.getElementById("show-translation").checked) {
-        translateSentence();
-      }
-    }
+  const videoPlayer = document.getElementById("videoPlayer");
+  videoPlayer.src = videos[index].src;
+  videoPlayer.load();
+  videoPlayer.play(); // Automatically play the video
+  updateText(videos[index].text);
+  updateButtons();
+  setInitialLanguageSelection();
+  updateCounter();
+  if (document.getElementById("show-translation").checked) {
+    translateSentence();
+  }
+}
+
 
     function updateButtons() {
       document.getElementById("prevBtn").style.display = currentVideoIndex > 0 ? "inline-block" : "none";
@@ -272,8 +273,7 @@
       document.getElementById("exerciseCounter").innerText = `Alıştırma: ${currentVideoIndex + 1} / ${videos.length}`;
     }
 
-    // updateText creates fill-in-the-blank inputs.
-    // Each input now also has a data-attempts attribute (starting at 0) and data-scored attribute.
+    // The updateText function creates fill-in-the-blank inputs and resets any previous scoring flags.
     function updateText(text) {
       let words = text.split(/([.,;!?\"\s]+)/).filter(Boolean);
       let blanks = [];
@@ -287,7 +287,7 @@
       }
       let exerciseText = words.map((word, index) => {
         return blanks.includes(index)
-          ? `<input type='text' class='fill-blank' data-answer='${word}' data-scored='false' data-attempts='0'>`
+          ? `<input type='text' class='fill-blank' data-answer='${word}' data-scored='false'>`
           : word;
       }).join("");
       document.getElementById("exercise-text").innerHTML = exerciseText;
@@ -318,45 +318,55 @@
       }
     });
 
-    // checkAnswers awards points only if scoring is enabled.
-    // Also, each blank’s awarded points are reduced based on how many mistakes (attempts) were made.
+    // Gamified checkAnswers: awards 10 points per blank filled correctly (only once per blank)
     function checkAnswers() {
-      let inputs = document.querySelectorAll(".fill-blank");
-      let pointsEarned = 0;
-      inputs.forEach(input => {
-        let answer = input.dataset.answer;
-        let userAnswer = input.value.trim().toLowerCase();
-        let correctAnswer = answer.toLowerCase();
-        // If correct answer:
-        if (userAnswer === correctAnswer) {
-          if (input.dataset.scored === "false") {
-            // Only award points if scoring is enabled.
-            if (scoringEnabled) {
-              let attempts = parseInt(input.dataset.attempts);
-              // Deduct 2 points per incorrect attempt, minimum of 2 points.
-              let pointsForBlank = Math.max(10 - 2 * attempts, 2);
-              pointsEarned += pointsForBlank;
-            }
-            input.dataset.scored = "true";
-          }
-          input.classList.add("correct");
-          input.classList.remove("incorrect");
-          input.disabled = true;
-        } else {
-          // Increment attempt count for each wrong check
-          let currentAttempts = parseInt(input.dataset.attempts);
-          input.dataset.attempts = currentAttempts + 1;
-          input.classList.add("incorrect");
-          input.classList.remove("correct");
-        }
-      });
-      // If scoring is enabled, add earned points and show message.
-      if (scoringEnabled && pointsEarned > 0) {
-        totalScore += pointsEarned;
-        showPointsMessage(pointsEarned);
+  // Declare inputs at the beginning so they are available in all code blocks
+  let inputs = document.querySelectorAll(".fill-blank");
+  
+  // Check if this exercise has already been scored
+  if (exercisesScored[currentVideoIndex]) {
+    inputs.forEach(input => {
+      if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
+        // Even if already scored, ensure the correct styling is applied
+        input.classList.add("correct");
+        input.classList.remove("incorrect");
+        input.disabled = true;
+      } else {
+        input.classList.add("incorrect");
+        input.classList.remove("correct");
       }
-      updateScoreCounter();
+    });
+    
+    return;
+  }
+  
+  let pointsEarned = 0;
+  
+  inputs.forEach(input => {
+    if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
+      if (input.dataset.scored === "false") {
+        pointsEarned += 10;
+        input.dataset.scored = "true";
+      }
+      input.classList.add("correct");
+      input.classList.remove("incorrect");
+      input.disabled = true;
+    } else {
+      input.classList.add("incorrect");
+      input.classList.remove("correct");
     }
+  });
+  
+  totalScore += pointsEarned;
+  if (pointsEarned > 0) {
+    showPointsMessage(pointsEarned);
+  }
+  updateScoreCounter();
+  
+  // Mark this exercise as scored so that points won't be added again
+  exercisesScored[currentVideoIndex] = true;
+}
+
 
     // Display a temporary message for points earned.
     function showPointsMessage(points) {
@@ -378,7 +388,6 @@
       document.getElementById("achievement-message").innerText = achievementMessage;
     }
 
-    // showAnswers fills in the correct answers without awarding points.
     function showAnswers() {
       let inputs = document.querySelectorAll(".fill-blank");
       inputs.forEach(input => {
@@ -390,11 +399,8 @@
       document.getElementById("showAnswersBtn").style.display = "none";
     }
 
-    // restartExercise reloads the exercise for the current video without awarding any points.
-    // It sets scoringEnabled to false so that no new points are given for the restarted exercise.
     function restartExercise() {
-      scoringEnabled = false;
-      updateText(videos[currentVideoIndex].text);
+      loadVideo(currentVideoIndex);
       document.getElementById("checkAnswersBtn").style.display = "inline-block";
       document.getElementById("showAnswersBtn").style.display = "inline-block";
     }
@@ -450,33 +456,7 @@
     }
 
     // Custom TTS function for translated text.
-    async function convertToSpeech() {
-      const translatedTextElement = document.getElementById("translated-text");
-      const text = translatedTextElement.innerText;
-      if (!text || text.trim() === "") {
-        alert("Önce metni çevirin!");
-        return;
-      }
-      const targetLang = document.getElementById("language-select").value;
-      try {
-        const response = await fetch(TTS_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: text, languageCode: targetLang })
-        });
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("TTS API Error:", errorText);
-          return;
-        }
-        const data = await response.json();
-        const audioPlayer = document.getElementById("audioPlayer");
-        audioPlayer.src = `data:audio/mp3;base64,${data.audioContent}`;
-        audioPlayer.play();
-      } catch (error) {
-        console.error("Error in convertToSpeech:", error);
-      }
-    }
+   
 
     loadVideo(currentVideoIndex);
   </script>

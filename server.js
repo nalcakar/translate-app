@@ -6,75 +6,65 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS ve JSON Middleware
+// CORS and JSON Middleware
 app.use(cors());
 app.use(express.json());
 
+// Existing environment variables for Google APIs
 const GOOGLE_TRANSLATE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
 const GOOGLE_TTS_API_KEY = process.env.GOOGLE_TTS_API_KEY;
 
-// 📌 Çeviri API'si
+// 📌 Existing /translate route
 app.post('/translate', async (req, res) => {
-    try {
-        const { text, targetLang } = req.body;
-
-        if (!text || !targetLang) {
-            return res.status(400).json({ error: 'Lütfen metin ve hedef dili belirtin' });
-        }
-
-        const response = await axios.post(
-            `https://translation.googleapis.com/language/translate/v2`,
-            {},
-            {
-                params: {
-                    q: text,
-                    target: targetLang,
-                    key: GOOGLE_TRANSLATE_API_KEY
-                }
-            }
-        );
-
-        res.json({ translatedText: response.data.data.translations[0].translatedText });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Çeviri yapılamadı' });
-    }
+  // ... your existing code
 });
 
-// 📌 TTS API (Metni Sese Dönüştürme)
+// 📌 Existing /tts route
 app.post('/tts', async (req, res) => {
-    try {
-        const { text, languageCode, ssmlGender } = req.body;
-
-        if (!text || !languageCode) {
-            return res.status(400).json({ error: 'Lütfen metin ve dil kodunu belirtin' });
-        }
-
-        const response = await axios.post(
-            `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
-            {
-                input: { text },
-                voice: { languageCode, ssmlGender: ssmlGender || "NEUTRAL" },
-                audioConfig: { audioEncoding: "MP3" }
-            }
-        );
-
-        const audioContent = response.data.audioContent;
-
-        if (!audioContent) {
-            return res.status(500).json({ error: 'Ses oluşturulamadı' });
-        }
-
-        res.json({ audioContent });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'TTS işlemi başarısız oldu' });
-    }
+  // ... your existing code
 });
 
+// 📌 NEW: OpenAI endpoint
+app.post('/openai', async (req, res) => {
+  try {
+    // For example, we expect the client to send a "prompt" or "messages"
+    const { prompt } = req.body;
 
+    if (!prompt) {
+      return res.status(400).json({ error: 'No prompt provided' });
+    }
+
+    // Call the OpenAI Chat Completions endpoint
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: 'You are an expert language tutor.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 150,
+        temperature: 0.7
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        }
+      }
+    );
+
+    // Extract the text from the response
+    const openaiReply = response.data.choices[0].message.content;
+
+    res.json({ reply: openaiReply });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'OpenAI request failed' });
+  }
+});
+
+// Start the server
 app.listen(PORT, () => {
-    console.log(`Sunucu ${PORT} portunda çalışıyor...`);
+  console.log(`Server running on port ${PORT}...`);
 });
