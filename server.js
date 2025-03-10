@@ -13,14 +13,21 @@ app.use(express.json());
 // API Keys from environment
 const { GOOGLE_TRANSLATE_API_KEY, GOOGLE_TTS_API_KEY, OPENAI_API_KEY } = process.env;
 
-// 📌 Existing /translate route
+// Debug: log if API keys are loaded
+if (!OPENAI_API_KEY) {
+  console.error('Error: OPENAI_API_KEY is not set in the environment variables.');
+}
+
+// 📌 Existing /translate route (placeholder)
 app.post('/translate', async (req, res) => {
-  // ... your existing translate code here
+  // TODO: Implement your translate functionality here
+  res.json({ message: 'Translate route not implemented yet.' });
 });
 
-// 📌 Existing /tts route
+// 📌 Existing /tts route (placeholder)
 app.post('/tts', async (req, res) => {
-  // ... your existing tts code here
+  // TODO: Implement your TTS functionality here
+  res.json({ message: 'TTS route not implemented yet.' });
 });
 
 // Helper function for OpenAI request
