@@ -20,11 +20,31 @@ if (!OPENAI_API_KEY) {
 if (!GOOGLE_TTS_API_KEY) {
   console.error('Error: GOOGLE_TTS_API_KEY is not set in the environment variables.');
 }
+if (!GOOGLE_TRANSLATE_API_KEY) {
+  console.error('Error: GOOGLE_TRANSLATE_API_KEY is not set in the environment variables.');
+}
 
-// 📌 /translate route (placeholder)
+// 📌 /translate route - implemented using Google Cloud Translation API
 app.post('/translate', async (req, res) => {
-  // TODO: Implement your translate functionality here
-  res.json({ message: 'Translate route not implemented yet.' });
+  const { text, target } = req.body;
+  if (!text || !target) {
+    return res.status(400).json({ error: 'Missing required parameters: text and target.' });
+  }
+  try {
+    const translationResponse = await axios.post(
+      `https://translation.googleapis.com/language/translate/v2?key=${GOOGLE_TRANSLATE_API_KEY}`,
+      {
+        q: text,
+        target: target,
+        source: 'tr'
+      }
+    );
+    const translatedText = translationResponse.data.data.translations[0].translatedText;
+    res.json({ translatedText });
+  } catch (error) {
+    console.error('Error calling Google Translate API:', error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'Translation request failed.' });
+  }
 });
 
 // 📌 /tts route - implemented using Google TTS API
