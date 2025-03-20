@@ -81,7 +81,7 @@ const fetchOpenAIResponse = async (prompt) => {
       { role: 'system', content: 'You are an expert language tutor.' },
       { role: 'user', content: prompt }
     ],
-    max_tokens: 150,
+    max_tokens: 1500,
     temperature: 0.7
   };
 
