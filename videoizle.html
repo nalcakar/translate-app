@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video & Çeviri Uygulaması</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 900px;
+        }
+        .video-container {
+            text-align: center;
+        }
+        video {
+            width: 100%;
+            border-radius: 10px;
+            max-height: 80vh;
+        }
+        .translation-container, .tts-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f0fe;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .menu {
+    display: flex;
+    justify-content: space-between; /* Moves buttons to opposite ends */
+    align-items: center;
+    width: 100%;
+}
+.menu button {
+    flex: 1; /* Ensures buttons take equal space */
+    max-width: 100px; /* Optional: Limits button width */
+}
+
+        .menu select, .menu button, .menu label {
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .menu label {
+            color: #333;
+        }
+        .exercise-counter {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="menu">
+            <label for="language-select">Çeviri Dili:</label>
+            <select id="language-select" onchange="setTranslationLanguage()">
+                <option value="tr">Türkçe</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+            </select>
+            <label>
+                <input type="checkbox" id="show-translation" onchange="toggleTranslation()"> Çeviriyi Göster
+            </label>
+        </div>
+        
+        <div class="video-container">
+            <video id="videoPlayer" controls disablePictureInPicture controlsList="nodownload nofullscreen">
+            </video>
+            <p class="exercise-counter" id="exerciseCounter"></p>
+        </div>
+        
+        <div class="translation-container">
+            <p id="english-text"><strong></strong></p>
+            <p id="translated-text" style="display: none;"></p>
+        </div>
+
+       
+
+        <!-- TTS Bölümü -->
+        <div class="tts-container">
+            <h3>Metni Seslendir</h3>
+            <label for="voice-select">Ses Seç:</label>
+            <select id="voice-select"></select>
+            <button onclick="playTextGoogle()">Seslendir</button>
+            <button onclick="stopSpeech()">Durdur</button>
+        </div>
+        <div class="menu">
+            <button id="prevButton" onclick="prevVideo()">Önceki</button>
+            <div style="flex: 1;"></div> <!-- Spacer to push the next button to the right -->
+            <button id="nextButton" onclick="nextVideo()">Sonraki</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedLanguage = localStorage.getItem("selectedLanguage") || "tr";
+        let currentVideoIndex = localStorage.getItem("currentVideoIndex") || 0;
+
+        const videos = [
+        { src: "video/You-ought-to-be-ashamed-of-yourself.mp4", text: "You ought to be ashamed of yourself!" },
+    { src: "video/Now-I-think-you-ought-to-go-to-sleep.mp4", text: "Now I think you ought to go to sleep." },
+    { src: "video/I-honestly-think-you-ought-to-sit-down-calmly-take-a-stress-pill-and-think-things-over.mp4", text: "I honestly think you ought to sit down calmly, take a stress pill and think things over." },
+    { src: "video/Maybe-you-ought-to-call-your-father-and-tell-him-about-it.mp4", text: "Maybe you ought to call your father and tell him about it." },
+    { src: "video/Hey-you-know-you-ought-to-invite-Maya-to-the-wedding.mp4", text: "Hey, you know, you ought to invite Maya to the wedding." },
+    { src: "video/So-tomorrow-I-think-we-ought-to-get-on-a-plane-and-go-straight-back-to-England.mp4", text: "So tomorrow I think we ought to get on a plane and go straight back to England." },
+    { src: "video/You-ought-to-be-ashamed-of-yourselves.mp4", text: "You ought to be ashamed of yourselves." },
+    { src: "video/Mark-before-Tony-comes-I-ought-to-explain-something.mp4", text: "Mark, before Tony comes, I ought to explain something." },
+    { src: "video/At-least-some-of-these-animals-ought-to-be-tested-for-disease.mp4", text: "At least some of these animals ought to be tested for disease." },
+    { src: "video/But-you-know-I-think-you-ought-to-get-him-some-help.mp4", text: "But, you know, I think you ought to get him some help." }
+
+        ];
+
+        document.getElementById("language-select").value = selectedLanguage;
+        loadVideo(currentVideoIndex);
+
+        function setTranslationLanguage() {
+            selectedLanguage = document.getElementById("language-select").value;
+            localStorage.setItem("selectedLanguage", selectedLanguage);
+        }
+
+        function toggleTranslation() {
+            const translationDiv = document.getElementById("translated-text");
+            if (document.getElementById("show-translation").checked) {
+                translateText();
+                translationDiv.style.display = "block";
+            } else {
+                translationDiv.style.display = "none";
+            }
+        }
+
+        function translateText() {
+            const textToTranslate = document.getElementById("english-text").textContent;
+            fetch('https://translate-app-yjvw.onrender.com/translate', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: textToTranslate, targetLang: selectedLanguage })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("translated-text").textContent = data.translatedText;
+            })
+            .catch(error => {
+                document.getElementById("translated-text").textContent = "Çeviri alınamadı.";
+            });
+        }
+
+        function loadVideo(index) {
+    index = parseInt(index, 10);
+    const videoElement = document.getElementById("videoPlayer");
+    const englishText = document.getElementById("english-text");
+
+    currentVideoIndex = index;
+    localStorage.setItem("currentVideoIndex", currentVideoIndex);
+
+    videoElement.innerHTML = `<source src="${videos[index].src}" type="video/mp4">`;
+    videoElement.load();
+    videoElement.play().catch(error => console.error("Autoplay prevented:", error)); // Attempt autoplay
+
+    englishText.textContent = videos[index].text;
+
+    updateButtonVisibility();
+    updateCounter();
+    toggleTranslation();
+}
+
+        function updateCounter() {
+            document.getElementById("exerciseCounter").innerText = `Alıştırma: ${currentVideoIndex + 1} / ${videos.length}`;
+        }
+        function updateButtonVisibility() {
+            const prevButton = document.getElementById("prevButton");
+            const nextButton = document.getElementById("nextButton");
+
+            // Hide the previous button on the first video.
+            if (currentVideoIndex <= 0) {
+                prevButton.style.display = "none";
+            } else {
+                prevButton.style.display = "inline-block";
+            }
+            // Hide the next button on the last video.
+            if (currentVideoIndex >= videos.length - 1) {
+                nextButton.style.display = "none";
+            } else {
+                nextButton.style.display = "inline-block";
+            }
+        }
+
+        function prevVideo() {
+            if (currentVideoIndex > 0) {
+                loadVideo(currentVideoIndex - 1);
+            }
+        }
+
+        function nextVideo() {
+            if (currentVideoIndex < videos.length - 1) {
+                loadVideo(currentVideoIndex + 1);
+            }
+        }
+
+        // Google TTS API
+        const GOOGLE_TTS_API_URL = "https://texttospeech.googleapis.com/v1/text:synthesize";
+        const API_KEY = "AIzaSyDG-j8_KESp6nKWgCUQ_67qZw7bYuRHcwE";
+
+        let audio = new Audio();
+
+        const voices = [
+            { name: "Tom - US Male", languageCode: "en-US", id: "en-US-Wavenet-J", gender: "MALE" },
+            { name: "Sally - US Female", languageCode: "en-US", id: "en-US-Wavenet-C", gender: "FEMALE" },
+            { name: "Mike - UK Male", languageCode: "en-GB", id: "en-GB-Wavenet-B", gender: "MALE" },
+            { name: "Judy - UK Female", languageCode: "en-GB", id: "en-GB-Wavenet-F", gender: "FEMALE" },
+            { name: "Henry - Australian Male", languageCode: "en-AU", id: "en-AU-Wavenet-B", gender: "MALE" },
+            { name: "Mary - Australian Female", languageCode: "en-AU", id: "en-AU-Wavenet-C", gender: "FEMALE" },
+        ];
+
+        function populateVoiceSelect() {
+            const voiceSelect = document.getElementById("voice-select");
+            voices.forEach(voice => {
+                let option = document.createElement("option");
+                option.value = voice.id;
+                option.textContent = `${voice.name} (${voice.languageCode})`;
+                voiceSelect.appendChild(option);
+            });
+        }
+        populateVoiceSelect();
+
+        async function playTextGoogle() {
+            let text = document.getElementById("english-text").textContent;
+            let selectedVoiceId = document.getElementById("voice-select").value;
+            let selectedVoice = voices.find(voice => voice.id === selectedVoiceId);
+            
+            const requestData = {
+                input: { text },
+                voice: { languageCode: selectedVoice.languageCode, name: selectedVoice.id, ssmlGender: selectedVoice.gender },
+                audioConfig: { audioEncoding: "MP3" }
+            };
+
+            const response = await fetch(`${GOOGLE_TTS_API_URL}?key=${API_KEY}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(requestData)
+            });
+
+            const data = await response.json();
+            audio.src = `data:audio/mp3;base64,${data.audioContent}`;
+            audio.play();
+        }
+
+        function stopSpeech() { 
+            audio.pause(); 
+            audio.currentTime = 0; 
+        }
+    </script>
+</body>
+</html>

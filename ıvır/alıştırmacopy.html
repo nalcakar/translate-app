@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video & Fill-in-the-Blanks</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 900px;
+            text-align: center;
+        }
+        video {
+            width: 100%;
+            border-radius: 10px;
+            max-height: 80vh;
+        }
+        .text-container {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        .hidden-words {
+            margin-top: 10px;
+            display: none;
+            font-size: 16px;
+            color: red;
+            background: white;
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        input.fill-blank {
+            width: 100px;
+            text-align: center;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        .correct {
+            background-color: #c8e6c9;
+            border: 2px solid green;
+        }
+        .incorrect {
+            background-color: #ffcdd2;
+            border: 2px solid red;
+        }
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .button-container button {
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="video-container">
+            <video id="videoPlayer" controls></video>
+        </div>
+        
+        <div class="text-container">
+            <h3>Boşlukları Doldurun</h3>
+            <p id="exercise-text"></p>
+            <p id="hidden-words" class="hidden-words"></p>
+        </div>
+        <button onclick="checkAnswers()">Kontrol Et</button>
+        <button onclick="showAnswers()">Cevabı Göster</button>
+        <button onclick="restartExercise()">Tekrar Başla</button>
+        
+        <div class="button-container">
+            <button id="prevBtn" onclick="prevVideo()">Önceki</button>
+            <button id="nextBtn" onclick="nextVideo()">Sonraki</button>
+        </div>
+        
+        <div class="menu">
+            <label>
+                <input type="checkbox" id="show-words" onchange="toggleWords()"> Çıkarılan Kelimeleri Göster
+            </label>
+        </div>
+    </div>
+
+    <script>
+        const videos = [
+            { src: "https://www.w3schools.com/html/mov_bbb.mp4", text: "Learning a new language opens many doors." },
+            { src: "https://www.w3schools.com/html/movie.mp4", text: "Practice makes perfect when learning a language." }
+        ];
+        let currentVideoIndex = 0;
+
+        function loadVideo(index) {
+            const videoPlayer = document.getElementById("videoPlayer");
+            videoPlayer.src = videos[index].src;
+            updateText(videos[index].text);
+            updateButtons();
+        }
+
+        function updateButtons() {
+            document.getElementById("prevBtn").style.display = currentVideoIndex > 0 ? "inline-block" : "none";
+            document.getElementById("nextBtn").style.display = currentVideoIndex < videos.length - 1 ? "inline-block" : "none";
+        }
+
+        function prevVideo() {
+            if (currentVideoIndex > 0) {
+                currentVideoIndex--;
+                loadVideo(currentVideoIndex);
+            }
+        }
+
+        function nextVideo() {
+            if (currentVideoIndex < videos.length - 1) {
+                currentVideoIndex++;
+                loadVideo(currentVideoIndex);
+            }
+        }
+
+        function updateText(text) {
+            let words = text.split(/([.,;!?\"\s]+)/).filter(Boolean);
+            let blanks = [];
+            let wordIndexes = words.map((word, index) => /[a-zA-Z]/.test(word) ? index : null).filter(i => i !== null);
+            for (let i = 0; i < Math.floor(wordIndexes.length * 2 / 3); i++) {
+                let randomIndex;
+                do {
+                    randomIndex = wordIndexes[Math.floor(Math.random() * wordIndexes.length)];
+                } while (blanks.includes(randomIndex));
+                blanks.push(randomIndex);
+            }
+            let exerciseText = words.map((word, index) => {
+                return blanks.includes(index) ? `<input type='text' class='fill-blank' data-answer='${word}'>` : word;
+            }).join("");
+            document.getElementById("exercise-text").innerHTML = exerciseText;
+            document.getElementById("hidden-words").innerText = "Çıkarılan Kelimeler: " + blanks.map(i => words[i]).join(", ");
+        }
+
+        function toggleWords() {
+            let hiddenWords = document.getElementById("hidden-words");
+            hiddenWords.style.display = document.getElementById("show-words").checked ? "block" : "none";
+        }
+
+        function checkAnswers() {
+            let inputs = document.querySelectorAll(".fill-blank");
+            inputs.forEach(input => {
+                if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
+                    input.classList.add("correct");
+                    input.classList.remove("incorrect");
+                    input.disabled = true;
+                } else {
+                    input.classList.add("incorrect");
+                    input.classList.remove("correct");
+                }
+            });
+        }
+
+        function showAnswers() {
+            let inputs = document.querySelectorAll(".fill-blank");
+            inputs.forEach(input => {
+                input.value = input.dataset.answer;
+                input.classList.add("correct");
+                input.disabled = true;
+            });
+        }
+
+        function restartExercise() {
+            loadVideo(currentVideoIndex);
+        }
+
+        loadVideo(currentVideoIndex);
+    </script>
+</body>
+</html>

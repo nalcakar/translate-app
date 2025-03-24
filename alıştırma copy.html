@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stylish Video & Fill-in-the-Blanks with Gamification</title>
+  <!-- Import Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #e0eafc, #cfdef3);
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #333;
+      box-sizing: border-box;
+    }
+    .container {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 900px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .container::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+      transform: rotate(45deg);
+      pointer-events: none;
+    }
+    .video-container {
+      position: relative;
+    }
+    video {
+      width: 100%;
+      border-radius: 10px;
+      max-height: 80vh;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+    /* Overlay for scoreboard and counter */
+    .video-overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 8px 12px;
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    .video-overlay .counter,
+    .video-overlay .scoreboard {
+      font-size: 16px;
+      margin: 2px 0;
+      font-weight: bold;
+      color: #333;
+    }
+    .text-container, .translation-container, .tts-container {
+      margin-top: 20px;
+      font-size: 18px;
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    .hidden-words {
+      display: none;
+      font-size: 16px;
+      color: #d32f2f;
+      background: #fff;
+      padding: 5px 10px;
+      border-radius: 5px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    input.fill-blank {
+      width: 60px;
+      text-align: center;
+      font-size: 16px;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      padding: 5px;
+      transition: all 0.3s ease;
+      margin: 0 3px;
+    }
+    input.fill-blank:focus {
+      border-color: #64b5f6;
+      outline: none;
+    }
+    .correct {
+      background-color: #c8e6c9;
+      border-color: #388e3c;
+    }
+    .incorrect {
+      background-color: #ffcdd2;
+      border-color: #d32f2f;
+    }
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+      gap: 10px;
+    }
+    .button-container button,
+    button#checkAnswersBtn,
+    button#showAnswersBtn,
+    button[onclick="restartExercise()"] {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      background-color: #64b5f6;
+      color: white;
+    }
+    .button-container button:hover,
+    button#checkAnswersBtn:hover,
+    button#showAnswersBtn:hover,
+    button[onclick="restartExercise()"]:hover {
+      background-color: #42a5f5;
+      transform: translateY(-2px);
+    }
+    /* Align checkboxes to the left */
+    .menu, .translation-container {
+      text-align: left;
+    }
+    .menu label, .translation-container label {
+      font-size: 16px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+    .language-selector {
+      margin-top: 10px;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    /* Style for gamification messages */
+    #points-message {
+      font-size: 16px;
+      color: #2e7d32;
+      opacity: 0;
+      transition: opacity 1s ease;
+      margin-top: 10px;
+    }
+    #achievement-message {
+      font-size: 16px;
+      color: #1976d2;
+      margin-top: 10px;
+    }
+    .tts-container {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f1f1f1;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    .tts-container select, .tts-container button {
+      margin-top: 5px;
+      padding: 8px 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+      transition: background-color 0.3s ease;
+    }
+    .tts-container button:hover {
+      background-color: #e0e0e0;
+    }
+    /* Mobile responsiveness */
+    @media (max-width: 600px) {
+      body {
+        padding: 20px 10px;
+      }
+      .container {
+        padding: 20px;
+        width: 95%;
+      }
+      video {
+        max-height: 60vh;
+      }
+      .text-container, .translation-container, .tts-container {
+        padding: 10px;
+        font-size: 16px;
+      }
+      .menu label, .translation-container label {
+        font-size: 14px;
+      }
+      .language-selector {
+        width: 100%;
+        font-size: 14px;
+      }
+      .button-container {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .button-container button,
+      button#checkAnswersBtn,
+      button#showAnswersBtn,
+      button[onclick="restartExercise()"] {
+        width: 100%;
+        font-size: 14px;
+      }
+      .button-container button:not(:last-child),
+      button#checkAnswersBtn,
+      button#showAnswersBtn,
+      button[onclick="restartExercise()"] {
+        margin-bottom: 10px;
+      }
+      .video-overlay .counter,
+      .video-overlay .scoreboard {
+        font-size: 14px;
+      }
+    }
+    /* Custom checkbox styling */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #64b5f6;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  vertical-align: middle;
+}
+
+/* Checked state styling */
+input[type="checkbox"]:checked {
+  background-color: #64b5f6;
+  border-color: #64b5f6;
+}
+
+/* Create a custom checkmark */
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Align checkboxes with their label text */
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px; /* Adjust the gap as needed */
+}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="video-container">
+      <video id="videoPlayer" controls autoplay muted playsinline controlsList="nofullscreen"></video>
+      <!-- Scoreboard and counter overlay -->
+      <div class="video-overlay">
+        <span id="exerciseCounter" class="counter"></span>
+        <span id="score-counter" class="scoreboard">Skor: 0</span>
+      </div>
+    </div>
+    
+    <p id="achievement-message"></p>
+    <p id="points-message"></p>
+    
+    <div class="text-container">
+      <h3>Boşlukları Doldurun</h3>
+      <p id="hidden-words" class="hidden-words"></p>
+      <p id="exercise-text"></p>
+      <p id="translated-text"></p>
+      <!-- Hidden element to store the original English text for TTS -->
+      <div id="english-text" style="display: none;"></div>
+    </div>
+    <button id="checkAnswersBtn" onclick="checkAnswers()">Kontrol Et</button>
+    <button id="showAnswersBtn" onclick="showAnswers()">Cevabı Göster</button>
+    <button onclick="restartExercise()">Tekrar Başla</button><br><br>
+   
+    <div class="translation-container">
+      <label>
+        <input type="checkbox" id="show-words" onchange="toggleWords()"> Çıkarılan Kelimeleri Göster
+      </label>
+      <label>
+        <input type="checkbox" id="show-translation" onchange="toggleTranslation()"> Cümle Çevirisini Göster
+      </label>
+      <select id="language-select" class="language-selector" onchange="translateSentence()">
+        <option value="tr">Türkçe</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+        <option value="de">Deutsch</option>
+      </select>
+    </div>
+    
+    <!-- TTS Container -->
+    <div class="tts-container">
+      <div>
+        <label for="voice-select">Google TTS Voice:</label>
+        <select id="voice-select"></select>
+        <button onclick="playTextGoogle()">Google Dinle</button>
+        <button onclick="stopSpeech()">Durdur</button>
+      </div>
+    </div>
+    
+    <div class="button-container">
+      <button id="prevBtn" onclick="prevVideo()">Önceki</button>
+      <div style="flex: 1;"></div>
+      <button id="nextBtn" onclick="nextVideo()">Sonraki</button>
+    </div>
+  </div>
+
+  <script>
+    // Global variables for gamification
+    let totalScore = 0;
+
+    // Use this endpoint for all TTS calls.
+    const TTS_ENDPOINT = "https://translate-app-yjvw.onrender.com/tts";
+   
+    const videos = [
+      { src: "video/You-ought-to-be-ashamed-of-yourself.mp4", text: "You ought to be ashamed of yourself!" },
+      { src: "video/Now-I-think-you-ought-to-go-to-sleep.mp4", text: "Now I think you ought to go to sleep." },
+      { src: "video/I-honestly-think-you-ought-to-sit-down-calmly-take-a-stress-pill-and-think-things-over.mp4", text: "I honestly think you ought to sit down calmly, take a stress pill and think things over." },
+      { src: "video/Maybe-you-ought-to-call-your-father-and-tell-him-about-it.mp4", text: "Maybe you ought to call your father and tell him about it." },
+      { src: "video/Hey-you-know-you-ought-to-invite-Maya-to-the-wedding.mp4", text: "Hey, you know, you ought to invite Maya to the wedding." },
+      { src: "video/So-tomorrow-I-think-we-ought-to-get-on-a-plane-and-go-straight-back-to-England.mp4", text: "So tomorrow I think we ought to get on a plane and go straight back to England." },
+      { src: "video/You-ought-to-be-ashamed-of-yourselves.mp4", text: "You ought to be ashamed of yourselves." },
+      { src: "video/Mark-before-Tony-comes-I-ought-to-explain-something.mp4", text: "Mark, before Tony comes, I ought to explain something." },
+      { src: "video/At-least-some-of-these-animals-ought-to-be-tested-for-disease.mp4", text: "At least some of these animals ought to be tested for disease." },
+      { src: "video/But-you-know-I-think-you-ought-to-get-him-some-help.mp4", text: "But, you know, I think you ought to get him some help." }
+    ];
+
+    let currentVideoIndex = 0;
+    let audio = new Audio();
+    let exercisesScored = new Array(videos.length).fill(false);
+    // Google TTS voice options
+    const voices = [
+      { name: "Tom - US Male", languageCode: "en-US", id: "en-US-Wavenet-J", gender: "MALE" },
+      { name: "Sally - US Female", languageCode: "en-US", id: "en-US-Wavenet-C", gender: "FEMALE" },
+      { name: "Mike - UK Male", languageCode: "en-GB", id: "en-GB-Wavenet-B", gender: "MALE" },
+      { name: "Judy - UK Female", languageCode: "en-GB", id: "en-GB-Wavenet-F", gender: "FEMALE" },
+      { name: "Henry - Australian Male", languageCode: "en-AU", id: "en-AU-Wavenet-B", gender: "MALE" },
+      { name: "Mary - Australian Female", languageCode: "en-AU", id: "en-AU-Wavenet-C", gender: "FEMALE" }
+    ];
+
+    function populateVoiceSelect() {
+      const voiceSelect = document.getElementById("voice-select");
+      voices.forEach(voice => {
+        let option = document.createElement("option");
+        option.value = voice.id;
+        option.textContent = `${voice.name} (${voice.languageCode})`;
+        voiceSelect.appendChild(option);
+      });
+    }
+    populateVoiceSelect();
+
+    // Google TTS function using a simplified payload structure.
+    async function playTextGoogle() {
+      let text = document.getElementById("english-text").textContent;
+      let selectedVoiceId = document.getElementById("voice-select").value;
+      let selectedVoice = voices.find(voice => voice.id === selectedVoiceId);
+
+      const requestData = {
+        text: text,
+        languageCode: selectedVoice.languageCode,
+        ssmlGender: selectedVoice.gender === "MALE" ? "MALE" : "FEMALE"
+      };
+
+      try {
+        const response = await fetch(TTS_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestData)
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("TTS API Error:", errorText);
+          return;
+        }
+        const data = await response.json();
+        audio.src = `data:audio/mp3;base64,${data.audioContent}`;
+        audio.play();
+      } catch (error) {
+        console.error("Error in playTextGoogle:", error);
+      }
+    }
+
+    function stopSpeech() { 
+      audio.pause(); 
+      audio.currentTime = 0; 
+    }
+
+    function loadVideo(index) {
+      const videoPlayer = document.getElementById("videoPlayer");
+      videoPlayer.src = videos[index].src;
+      videoPlayer.load();
+      videoPlayer.play(); // Automatically play the video
+      updateText(videos[index].text);
+      updateButtons();
+      setInitialLanguageSelection();
+      updateCounter();
+      if (document.getElementById("show-translation").checked) {
+        translateSentence();
+      }
+    }
+
+    function updateButtons() {
+      document.getElementById("prevBtn").style.display = currentVideoIndex > 0 ? "inline-block" : "none";
+      document.getElementById("nextBtn").style.display = currentVideoIndex < videos.length - 1 ? "inline-block" : "none";
+    }
+
+    function prevVideo() {
+      if (currentVideoIndex > 0) {
+        currentVideoIndex--;
+        loadVideo(currentVideoIndex);
+      }
+      document.getElementById("checkAnswersBtn").style.display = "inline-block";
+      document.getElementById("showAnswersBtn").style.display = "inline-block";
+    }
+
+    function nextVideo() {
+      if (currentVideoIndex < videos.length - 1) {
+        currentVideoIndex++;
+        loadVideo(currentVideoIndex);
+      }
+      document.getElementById("checkAnswersBtn").style.display = "inline-block";
+      document.getElementById("showAnswersBtn").style.display = "inline-block";
+    }
+
+    // Update the overlay counter and scoreboard
+    function updateCounter() {
+      document.getElementById("exerciseCounter").innerText = `Alıştırma: ${currentVideoIndex + 1} / ${videos.length}`;
+    }
+
+    // The updateText function creates fill-in-the-blank inputs and resets any previous scoring flags.
+    function updateText(text) {
+      let words = text.split(/([.,;!?\"\s]+)/).filter(Boolean);
+      let blanks = [];
+      let wordIndexes = words.map((word, index) => /[a-zA-Z]/.test(word) ? index : null).filter(i => i !== null);
+      for (let i = 0; i < Math.floor(wordIndexes.length * 2 / 5); i++) {
+        let randomIndex;
+        do {
+          randomIndex = wordIndexes[Math.floor(Math.random() * wordIndexes.length)];
+        } while (blanks.includes(randomIndex));
+        blanks.push(randomIndex);
+      }
+      let exerciseText = words.map((word, index) => {
+        return blanks.includes(index)
+          ? `<input type='text' class='fill-blank' data-answer='${word}' data-scored='false'>`
+          : word;
+      }).join("");
+      document.getElementById("exercise-text").innerHTML = exerciseText;
+      document.getElementById("hidden-words").innerText = "Çıkarılan Kelimeler: " + blanks.map(i => words[i]).join(", ");
+      document.getElementById("english-text").innerText = text;
+    }
+
+    function toggleWords() {
+      let hiddenWords = document.getElementById("hidden-words");
+      hiddenWords.style.display = document.getElementById("show-words").checked ? "block" : "none";
+    }
+
+    function adjustInputWidth(input) {
+      const span = document.createElement("span");
+      span.style.visibility = "hidden";
+      span.style.position = "absolute";
+      span.style.whiteSpace = "nowrap";
+      span.style.fontSize = window.getComputedStyle(input).fontSize;
+      span.textContent = input.value || input.placeholder || "a";
+      document.body.appendChild(span);
+      input.style.width = Math.max(60, span.offsetWidth + 10) + "px";
+      document.body.removeChild(span);
+    }
+
+    document.addEventListener("input", function(event) {
+      if (event.target.classList.contains("fill-blank")) {
+        adjustInputWidth(event.target);
+      }
+    });
+
+    // Gamified checkAnswers: awards 10 points per blank filled correctly (only once per blank)
+    function checkAnswers() {
+      let inputs = document.querySelectorAll(".fill-blank");
+      
+      if (exercisesScored[currentVideoIndex]) {
+        inputs.forEach(input => {
+          if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
+            input.classList.add("correct");
+            input.classList.remove("incorrect");
+            input.disabled = true;
+          } else {
+            input.classList.add("incorrect");
+            input.classList.remove("correct");
+          }
+        });
+        return;
+      }
+      
+      let pointsEarned = 0;
+      
+      inputs.forEach(input => {
+        if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
+          if (input.dataset.scored === "false") {
+            pointsEarned += 10;
+            input.dataset.scored = "true";
+          }
+          input.classList.add("correct");
+          input.classList.remove("incorrect");
+          input.disabled = true;
+        } else {
+          input.classList.add("incorrect");
+          input.classList.remove("correct");
+        }
+      });
+      
+      totalScore += pointsEarned;
+      if (pointsEarned > 0) {
+        showPointsMessage(pointsEarned);
+      }
+      updateScoreCounter();
+      
+      exercisesScored[currentVideoIndex] = true;
+    }
+
+    function showPointsMessage(points) {
+      let messageElement = document.getElementById("points-message");
+      messageElement.innerText = "You earned " + points + " points!";
+      messageElement.style.opacity = 1;
+      setTimeout(() => { messageElement.style.opacity = 0; }, 2000);
+    }
+
+    function updateScoreCounter() {
+      document.getElementById("score-counter").innerText = "Skor: " + totalScore;
+      let achievementMessage = "";
+      if (totalScore >= 200) {
+        achievementMessage = "Master Achiever!";
+      } else if (totalScore >= 100) {
+        achievementMessage = "Great job!";
+      }
+      document.getElementById("achievement-message").innerText = achievementMessage;
+    }
+
+    function showAnswers() {
+      let inputs = document.querySelectorAll(".fill-blank");
+      inputs.forEach(input => {
+        input.value = input.dataset.answer;
+        input.classList.add("correct");
+        input.disabled = true;
+        adjustInputWidth(input); // Adjust input width based on the answer text
+      });
+      document.getElementById("checkAnswersBtn").style.display = "none";
+      document.getElementById("showAnswersBtn").style.display = "none";
+    }
+
+    function restartExercise() {
+      loadVideo(currentVideoIndex);
+      document.getElementById("checkAnswersBtn").style.display = "inline-block";
+      document.getElementById("showAnswersBtn").style.display = "inline-block";
+    }
+
+    function toggleTranslation() {
+      let showTranslation = document.getElementById("show-translation").checked;
+      let translatedText = document.getElementById("translated-text");
+      translatedText.style.display = showTranslation ? "block" : "none";
+      if (showTranslation) {
+        translateSentence();
+      }
+    }
+
+    function setInitialLanguageSelection() {
+      const savedLanguage = localStorage.getItem("selectedLanguage");
+      const defaultLanguage = navigator.language.substring(0, 2);
+      const languageSelect = document.getElementById("language-select");
+      if (savedLanguage) {
+        languageSelect.value = savedLanguage;
+      } else {
+        if ([...languageSelect.options].some(option => option.value === defaultLanguage)) {
+          languageSelect.value = defaultLanguage;
+        } else {
+          languageSelect.value = "en";
+        }
+      }
+    }
+
+    function translateSentence() {
+      const text = videos[currentVideoIndex].text;
+      const languageSelect = document.getElementById("language-select");
+      const language = languageSelect.value;
+      localStorage.setItem("selectedLanguage", language);
+      fetch('https://translate-app-yjvw.onrender.com/translate', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text, targetLang: language })
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        document.getElementById("translated-text").innerText = data.translatedText;
+      })
+      .catch(error => {
+        console.error('Error translating text:', error);
+        document.getElementById("translated-text").innerText = 'Translation error: ' + error.message;
+      });
+    }
+
+    loadVideo(currentVideoIndex);
+  </script>
+</body>
+</html>
