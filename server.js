@@ -6,74 +6,70 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
+// ✅ CORS middleware – Özelleştirilmiş (kritik!)
+app.use(cors({
+  origin: "http://localhost:3001", // ya da frontend URL'in
+  credentials: true
+}));
+
 app.use(express.json());
 
-// API Keys from environment
+// ✅ API Keys (dotenv üzerinden)
 const { GOOGLE_TRANSLATE_API_KEY, GOOGLE_TTS_API_KEY, OPENAI_API_KEY } = process.env;
 
-// Debug: log if API keys are loaded
-if (!OPENAI_API_KEY) {
-  console.error('Error: OPENAI_API_KEY is not set in the environment variables.');
-}
-if (!GOOGLE_TTS_API_KEY) {
-  console.error('Error: GOOGLE_TTS_API_KEY is not set in the environment variables.');
-}
-if (!GOOGLE_TRANSLATE_API_KEY) {
-  console.error('Error: GOOGLE_TRANSLATE_API_KEY is not set in the environment variables.');
-}
+// Debug
+if (!OPENAI_API_KEY) console.error('❗ OPENAI_API_KEY yok!');
+if (!GOOGLE_TTS_API_KEY) console.error('❗ GOOGLE_TTS_API_KEY yok!');
+if (!GOOGLE_TRANSLATE_API_KEY) console.error('❗ GOOGLE_TRANSLATE_API_KEY yok!');
 
-// 📌 /translate route - implemented using Google Cloud Translation API
+// ✅ /translate → Google Translate API
 app.post('/translate', async (req, res) => {
   const { text, target } = req.body;
   if (!text || !target) {
     return res.status(400).json({ error: 'Missing required parameters: text and target.' });
   }
   try {
-    const translationResponse = await axios.post(
+    const response = await axios.post(
       `https://translation.googleapis.com/language/translate/v2?key=${GOOGLE_TRANSLATE_API_KEY}`,
       {
         q: text,
-        target: target,
+        target,
         source: 'tr'
       }
     );
-    const translatedText = translationResponse.data.data.translations[0].translatedText;
+    const translatedText = response.data.data.translations[0].translatedText;
     res.json({ translatedText });
   } catch (error) {
-    console.error('Error calling Google Translate API:', error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'Translation request failed.' });
+    console.error("🔴 Translate API hatası:", error.response?.data || error.message);
+    res.status(500).json({ error: 'Translation failed.' });
   }
 });
 
-// 📌 /tts route - implemented using Google TTS API
+// ✅ /tts → Google TTS API
 app.post('/tts', async (req, res) => {
   const { text, languageCode, ssmlGender } = req.body;
   if (!text || !languageCode || !ssmlGender) {
     return res.status(400).json({ error: 'Missing required parameters: text, languageCode, and ssmlGender.' });
   }
+
   try {
-    const ttsResponse = await axios.post(
+    const response = await axios.post(
       `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
       {
         input: { text },
         voice: { languageCode, ssmlGender },
         audioConfig: { audioEncoding: 'MP3' }
       },
-      {
-        headers: { 'Content-Type': 'application/json' }
-      }
+      { headers: { 'Content-Type': 'application/json' } }
     );
-    const audioContent = ttsResponse.data.audioContent;
-    res.json({ audioContent });
+    res.json({ audioContent: response.data.audioContent });
   } catch (error) {
-    console.error('Error calling Google TTS API:', error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'TTS request failed.' });
+    console.error("🔴 TTS API hatası:", error.response?.data || error.message);
+    res.status(500).json({ error: 'TTS failed.' });
   }
 });
 
-// Helper function for OpenAI request
+// 🔧 Yardımcı: OpenAI yanıtı
 const fetchOpenAIResponse = async (prompt) => {
   const payload = {
     model: 'gpt-3.5-turbo',
@@ -94,10 +90,9 @@ const fetchOpenAIResponse = async (prompt) => {
   return response.data.choices[0].message.content;
 };
 
-// 📌 /openai endpoint
+// ✅ /openai → ChatGPT yanıtı
 app.post('/openai', async (req, res) => {
   const { prompt } = req.body;
-
   if (!prompt) {
     return res.status(400).json({ error: 'No prompt provided' });
   }
@@ -106,12 +101,12 @@ app.post('/openai', async (req, res) => {
     const reply = await fetchOpenAIResponse(prompt);
     res.json({ reply });
   } catch (error) {
-    console.error('Error calling OpenAI API:', error.response ? error.response.data : error.message);
+    console.error("🔴 OpenAI hatası:", error.response?.data || error.message);
     res.status(500).json({ error: 'OpenAI request failed' });
   }
 });
 
-// Start the server
+// ✅ Sunucu başlat
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}...`);
+  console.log(`🚀 Sunucu ${PORT} portunda çalışıyor...`);
 });
