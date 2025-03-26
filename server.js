@@ -8,21 +8,26 @@ const { Pool } = require("pg");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// PostgreSQL bağlantısı (Neon.tech)
+// 🔌 PostgreSQL bağlantısı (Neon.tech)
 const db = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
-// CORS ayarı
+// 🌐 CORS (Render & Localhost için uyumlu)
+const allowedOrigins = [
+  "http://localhost:3001",
+  "https://your-frontend-app.onrender.com" // kendi Render frontend domaininle değiştir
+];
 app.use(cors({
-  origin: "http://localhost:3001",
+  origin: allowedOrigins,
   credentials: true
 }));
+app.options("*", cors());
 
 app.use(express.json());
 
-// Session ayarları
+// 💾 Session ayarları
 app.use(session({
   secret: "my-secret",
   resave: false,
@@ -30,7 +35,7 @@ app.use(session({
   cookie: { maxAge: 86400000 }
 }));
 
-// 🔐 Kullanıcı kontrolü
+// 👤 Kullanıcı durumu kontrol
 app.get("/me", (req, res) => {
   if (req.session.user) {
     res.json(req.session.user);
@@ -39,13 +44,13 @@ app.get("/me", (req, res) => {
   }
 });
 
-// Patreon login yönlendirme
+// 🔐 Patreon login
 app.get("/login", (req, res) => {
   const authUrl = `https://www.patreon.com/oauth2/authorize?response_type=code&client_id=${process.env.PATREON_CLIENT_ID}&redirect_uri=${process.env.PATREON_REDIRECT_URI}&scope=identity identity.memberships`;
   res.redirect(authUrl);
 });
 
-// Patreon callback
+// 🔄 Patreon callback
 app.get("/auth/patreon/callback", async (req, res) => {
   const code = req.query.code;
   try {
@@ -67,7 +72,8 @@ app.get("/auth/patreon/callback", async (req, res) => {
     );
 
     const userData = userRes.data;
-    const isPatron = Array.isArray(userData?.included) && userData.included[0]?.attributes?.patron_status === "active_patron";
+    const isPatron = Array.isArray(userData?.included) &&
+      userData.included[0]?.attributes?.patron_status === "active_patron";
 
     req.session.user = {
       name: userData?.data?.attributes?.full_name || "Bilinmiyor",
@@ -83,23 +89,23 @@ app.get("/auth/patreon/callback", async (req, res) => {
   }
 });
 
-// Çıkış
+// 🚪 Logout
 app.get("/logout", (req, res) => {
   req.session.destroy(() => {
     res.redirect("/index.html");
   });
 });
 
-// 🔸 /translate endpoint
+// 🌍 Translate endpoint
 app.post("/translate", async (req, res) => {
   const { text, target } = req.body;
   if (!text || !target) return res.status(400).json({ error: "Eksik parametre" });
+
   try {
-    const response = await axios.post(`https://translation.googleapis.com/language/translate/v2?key=${process.env.GOOGLE_TRANSLATE_API_KEY}`, {
-      q: text,
-      target,
-      source: "tr"
-    });
+    const response = await axios.post(
+      `https://translation.googleapis.com/language/translate/v2?key=${process.env.GOOGLE_TRANSLATE_API_KEY}`,
+      { q: text, target, source: "tr" }
+    );
     res.json({ translatedText: response.data.data.translations[0].translatedText });
   } catch (err) {
     console.error("Çeviri hatası:", err.response?.data || err.message);
@@ -107,16 +113,20 @@ app.post("/translate", async (req, res) => {
   }
 });
 
-// 🔸 /tts endpoint
+// 🔊 TTS endpoint
 app.post("/tts", async (req, res) => {
   const { text, languageCode, ssmlGender } = req.body;
   if (!text || !languageCode || !ssmlGender) return res.status(400).json({ error: "Eksik parametre" });
+
   try {
-    const response = await axios.post(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${process.env.GOOGLE_TTS_API_KEY}`, {
-      input: { text },
-      voice: { languageCode, ssmlGender },
-      audioConfig: { audioEncoding: "MP3" }
-    });
+    const response = await axios.post(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${process.env.GOOGLE_TTS_API_KEY}`,
+      {
+        input: { text },
+        voice: { languageCode, ssmlGender },
+        audioConfig: { audioEncoding: "MP3" }
+      }
+    );
     res.json({ audioContent: response.data.audioContent });
   } catch (err) {
     console.error("TTS hatası:", err.response?.data || err.message);
@@ -124,10 +134,11 @@ app.post("/tts", async (req, res) => {
   }
 });
 
-// 🔸 /openai endpoint
+// 🧠 OpenAI endpoint
 app.post("/openai", async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) return res.status(400).json({ error: "Prompt eksik" });
+
   try {
     const response = await axios.post("https://api.openai.com/v1/chat/completions", {
       model: "gpt-3.5-turbo",
@@ -151,7 +162,7 @@ app.post("/openai", async (req, res) => {
   }
 });
 
-// 🔸 /save-question endpoint
+// 💾 Soru kaydetme endpoint
 app.post("/save-question", async (req, res) => {
   const { title, questions } = req.body;
   const user = req.session.user;
@@ -179,7 +190,7 @@ app.post("/save-question", async (req, res) => {
   }
 });
 
-// Sunucu başlat
+// 🚀 Sunucuyu başlat
 app.listen(PORT, () => {
   console.log(`🚀 Sunucu http://localhost:${PORT} adresinde çalışıyor`);
 });
