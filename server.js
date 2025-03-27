@@ -409,12 +409,11 @@ app.post("/save-question-by-category-id", authMiddleware, async (req, res) => {
     res.status(500).json({ success: false });
   }
 });
-const { Configuration, OpenAIApi } = require("openai");
+const OpenAI = require("openai");
 
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
-const openai = new OpenAIApi(configuration);
 
 app.post("/openai", authMiddleware, async (req, res) => {
   const { prompt } = req.body;
@@ -424,12 +423,12 @@ app.post("/openai", authMiddleware, async (req, res) => {
   }
 
   try {
-    const completion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo", // veya gpt-4
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: prompt }],
     });
 
-    const response = completion.data.choices[0].message.content;
+    const response = completion.choices[0].message.content;
     res.json({ success: true, response });
   } catch (err) {
     console.error("OpenAI Hatası:", err.response?.data || err.message);
