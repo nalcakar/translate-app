@@ -409,3 +409,30 @@ app.post("/save-question-by-category-id", authMiddleware, async (req, res) => {
     res.status(500).json({ success: false });
   }
 });
+const { Configuration, OpenAIApi } = require("openai");
+
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
+
+app.post("/openai", authMiddleware, async (req, res) => {
+  const { prompt } = req.body;
+
+  if (!prompt) {
+    return res.status(400).json({ error: "Prompt eksik." });
+  }
+
+  try {
+    const completion = await openai.createChatCompletion({
+      model: "gpt-3.5-turbo", // veya gpt-4
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const response = completion.data.choices[0].message.content;
+    res.json({ success: true, response });
+  } catch (err) {
+    console.error("OpenAI Hatası:", err.response?.data || err.message);
+    res.status(500).json({ error: "OpenAI isteği başarısız." });
+  }
+});
