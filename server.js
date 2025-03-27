@@ -7,6 +7,8 @@ const bodyParser = require("body-parser");
 const pool = require("./db");
 
 const app = express();
+app.set("trust proxy", 1); // 👈 BUNU EN ÜSTE EKLE
+
 app.use(cors({
   origin: true,             // ya da belirli bir URL: "https://your-frontend.com"
   credentials: true         // Cookie'yi kabul et
