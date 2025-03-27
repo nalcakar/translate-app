@@ -7,7 +7,10 @@ const bodyParser = require("body-parser");
 const pool = require("./db");
 
 const app = express();
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({
+  origin: true,             // ya da belirli bir URL: "https://your-frontend.com"
+  credentials: true         // Cookie'yi kabul et
+}));
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
@@ -16,8 +19,13 @@ app.use(
     secret: process.env.SESSION_SECRET || "gizli",
     resave: false,
     saveUninitialized: true,
+    cookie: {
+      secure: true,         // HTTPS bağlantı zorunlu
+      sameSite: "none",     // Farklı origin'lerden cookie kabul et
+    }
   })
 );
+
 
 // ---------------- /login → /auth/patreon ------------------
 
